@@ -2,14 +2,15 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  generateName: sglang-moe-cap-
+  generateName: sglang-gpt-a100x1-
   #generateName: sglang-moe-cap-gpt-oss-120b-nvidia-a100-sxm4-80gbx1-1000-8000-bs1-arena-hard-
   labels:
     kueue.x-k8s.io/queue-name:  eidf230ns-user-queue
 spec:
   completions: 1
   backoffLimit: 0
-  ttlSecondsAfterFinished: 1800
+  #ttlSecondsAfterFinished: 1800 # delete after 30 min
+  ttlSecondsAfterFinished: 604800 # delete after 1 week
   template:
     metadata:
       name: job-sglang-moe-cap
@@ -56,10 +57,9 @@ spec:
             python -m moe_cap.runner.openai_api_profile \
               --model_name unsloth/gpt-oss-120b \
               --datasets arena-hard \
-              --input-tokens 1000 \
-              --output-tokens 8000 \
+              --target-input-tokens 1000 \
+              --target-output-tokens 8000 \
               --num-samples 100 \
-              --config-file configs/stub.yaml \
               --api-url http://localhost:30000/v1/completions \
               --backend sglang \
               --ignore-eos \
@@ -75,9 +75,9 @@ spec:
             
             echo "Server stopped. Copying files to pvc..."
             
-            mkdir -p /mnt/ceph/tmp/MoE-CAP-outputs/20260303-1445
-            cp -R /dev/shm/gpt-oss-120b_NVIDIA-A100-SXM4-80GBx1_1000_8000_bs1_arena-hard /mnt/ceph/tmp/MoE-CAP-outputs/20260303-1445/
-            cp /dev/shm/gpt-oss-120b_NVIDIA-A100-SXM4-80GBx1_1000_8000_bs1_arena-hard_20260303-1445* /mnt/ceph/tmp/MoE-CAP-outputs/20260303-1445/
+            mkdir -p /mnt/ceph/MoE-CAP-outputs/20260303-1445
+            cp -R /dev/shm/gpt-oss-120b_NVIDIA-A100-SXM4-80GBx1_1000_8000_bs1_arena-hard /mnt/ceph/MoE-CAP-outputs/20260303-1445/
+            cp /dev/shm/gpt-oss-120b_NVIDIA-A100-SXM4-80GBx1_1000_8000_bs1_arena-hard_20260303-1445* /mnt/ceph/MoE-CAP-outputs/20260303-1445/
             
             echo "Files copied, exiting container"
         ports:
@@ -99,11 +99,11 @@ spec:
       volumes:
         - name: volume
           persistentVolumeClaim:
-            claimName: client-ceph-pvc
+            claimName: moe-benchmark-output
         - name: dshm
           emptyDir:
             medium: Memory
-            sizeLimit: 16Gi
+            sizeLimit: 60Gi
       nodeSelector:
         nvidia.com/gpu.product: NVIDIA-A100-SXM4-80GB
                

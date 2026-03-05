@@ -2,19 +2,19 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  generateName: sglang-gpt-h100x1-
-  #generateName: sglang-moe-cap-gpt-oss-120b-nvidia-h100-80gb-hbm3x1-1000-8000-bs1-arena-hard-
+  generateName: sglang-qwen3-fp8-h100x4-
+  #generateName: sglang-moe-cap-qwen3-235b-a22b-nvidia-h100-80gb-hbm3x4-1000-8000-bs1-arena-hard-
   labels:
     kueue.x-k8s.io/queue-name:  eidf230ns-user-queue
 spec:
   completions: 1
   backoffLimit: 0
   #ttlSecondsAfterFinished: 1800 # delete after 30 min
-  ttlSecondsAfterFinished: 604800 # delete after 1 week
+  ttlSecondsAfterFinished: 604800 # delete after 1 week  
   template:
     metadata:
       name: job-sglang-moe-cap
-      #name: job-sglang-moe-cap-gpt-oss-120b-nvidia-h100-80gb-hbm3x1-1000-8000-bs1-arena-hard
+      #name: job-sglang-moe-cap-qwen3-235b-a22b-nvidia-h100-80gb-hbm3x4-1000-8000-bs1-arena-hard
     spec:
       containers:
       - name: sglang-server
@@ -35,12 +35,15 @@ spec:
 
             # Start server
             python -m moe_cap.systems.sglang \
-              --model-path unsloth/gpt-oss-120b \
+              --model-path Qwen/Qwen3-235B-A22B-FP8 \
+              --mem-fraction-static 0.85 \
+              --context-length 32768 \
+              --kv-cache-dtype fp8_e5m2 \
+              --reasoning-parser qwen3 \
               --port 30000 \
-              --mem-fraction-static 0.90 \
               --expert-distribution-recorder-mode stat \
-              --tp-size 1 \
-              &> /dev/shm/gpt-oss-120b_NVIDIA-H100-80GB-HBM3x1_1000_8000_bs1_arena-hard_20260303-1445.server_log &
+              --tp-size 4 \
+              &> /dev/shm/Qwen3-235B-A22B-FP8_NVIDIA-H100-80GB-HBM3x4_1000_8000_bs1_arena-hard_20260303-1445.server_log &
             SERVER_PID=$!
 
             # Wait until the /health endpoint returns HTTP 200
@@ -54,9 +57,9 @@ spec:
             echo "SGLang server is ready!"
             echo "Starting to serve bench (sending http requests)..."
             
-            mkdir -p /dev/shm/gpt-oss-120b_NVIDIA-H100-80GB-HBM3x1_1000_8000_bs1_arena-hard
+            mkdir -p /dev/shm/Qwen3-235B-A22B-FP8_NVIDIA-H100-80GB-HBM3x4_1000_8000_bs1_arena-hard
             python -m moe_cap.runner.openai_api_profile \
-              --model_name unsloth/gpt-oss-120b \
+              --model_name Qwen/Qwen3-235B-A22B-FP8 \
               --datasets arena-hard \
               --target-input-tokens 1000 \
               --target-output-tokens 8000 \
@@ -65,8 +68,8 @@ spec:
               --backend sglang \
               --ignore-eos \
               --server-batch-size 1 \
-              --output_dir /dev/shm/gpt-oss-120b_NVIDIA-H100-80GB-HBM3x1_1000_8000_bs1_arena-hard \
-              &> /dev/shm/gpt-oss-120b_NVIDIA-H100-80GB-HBM3x1_1000_8000_bs1_arena-hard_20260303-1445.client_log
+              --output_dir /dev/shm/Qwen3-235B-A22B-FP8_NVIDIA-H100-80GB-HBM3x4_1000_8000_bs1_arena-hard \
+              &> /dev/shm/Qwen3-235B-A22B-FP8_NVIDIA-H100-80GB-HBM3x4_1000_8000_bs1_arena-hard_20260303-1445.client_log
 
             echo "Starting to serve bench (sending http requests)... done!"
             echo "Benchmark finished, shutting down server..."
@@ -77,8 +80,8 @@ spec:
             echo "Server stopped. Copying files to pvc..."
             
             mkdir -p /mnt/ceph/MoE-CAP-outputs/20260303-1445
-            cp -R /dev/shm/gpt-oss-120b_NVIDIA-H100-80GB-HBM3x1_1000_8000_bs1_arena-hard /mnt/ceph/MoE-CAP-outputs/20260303-1445/
-            cp /dev/shm/gpt-oss-120b_NVIDIA-H100-80GB-HBM3x1_1000_8000_bs1_arena-hard_20260303-1445* /mnt/ceph/MoE-CAP-outputs/20260303-1445/
+            cp -R /dev/shm/Qwen3-235B-A22B-FP8_NVIDIA-H100-80GB-HBM3x4_1000_8000_bs1_arena-hard /mnt/ceph/MoE-CAP-outputs/20260303-1445/
+            cp /dev/shm/Qwen3-235B-A22B-FP8_NVIDIA-H100-80GB-HBM3x4_1000_8000_bs1_arena-hard_20260303-1445* /mnt/ceph/MoE-CAP-outputs/20260303-1445/
             
             echo "Files copied, exiting container"
         ports:
@@ -90,7 +93,7 @@ spec:
           limits:
             cpu: 10
             memory: '100Gi'
-            nvidia.com/gpu: 1
+            nvidia.com/gpu: 4
         volumeMounts:
           - mountPath: /mnt/ceph
             name: volume
@@ -100,7 +103,7 @@ spec:
       volumes:
         - name: volume
           persistentVolumeClaim:
-            claimName: moe-benchmark-output 
+            claimName: moe-benchmark-output
         - name: dshm
           emptyDir:
             medium: Memory
