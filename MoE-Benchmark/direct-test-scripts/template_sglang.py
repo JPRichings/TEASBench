@@ -83,10 +83,9 @@ spec:
             python -m moe_cap.runner.openai_api_profile \\
               --model_name {model_name} \\
               --datasets {dataset} \\
-              --input-tokens {target_input_tokens} \\
-              --output-tokens {target_output_tokens} \\
+              --target-input-tokens {target_input_tokens} \\
+              --target-output-tokens {target_output_tokens} \\
               --num-samples {num_samples} \\
-              --config-file configs/stub.yaml \\
               --api-url http://localhost:30000/v1/completions \\
               --backend sglang \\
               --ignore-eos \\
@@ -102,9 +101,9 @@ spec:
             
             echo "Server stopped. Copying files to pvc..."
             
-            mkdir -p /mnt/ceph/tmp/MoE-CAP-outputs
-            cp -R /dev/shm/{run_name} /mnt/ceph/tmp/MoE-CAP-outputs/num_samples_256/
-            cp /dev/shm/{run_name}_{timestamp}* /mnt/ceph/tmp/MoE-CAP-outputs/num_samples_256/
+            mkdir -p /mnt/ceph/tmp/MoE-CAP-outputs/{timestamp}
+            cp -R /dev/shm/{run_name} /mnt/ceph/tmp/MoE-CAP-outputs/{timestamp}/
+            cp /dev/shm/{run_name}_{timestamp}* /mnt/ceph/tmp/MoE-CAP-outputs/{timestamp}/
             
             echo "Files copied, exiting container"
         ports:
