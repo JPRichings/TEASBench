@@ -36,6 +36,10 @@ spec:
               secretKeyRef:
                 name: teas-develop-results-private-jr
                 key: git_teas_develop_results_private
+          - name: RUN_ID
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
         command: ["/bin/bash", "-c"]
         args:
           - |
@@ -53,9 +57,6 @@ spec:
 
             # Introduce logic to replace variables
 
-            # run_name=f"{inference_engine}_{model_name_clean}_{gpu}x{num_gpu}_{token_in}_{token_out}_bs{batch_size}_{dataset}"
-
-            run_name=jr_test
             timestamp=$( date +%Y%m%d-%H%M )
 
             ## On first pass touch a file          
@@ -69,7 +70,7 @@ spec:
 
             ls $TEAS_ITER_DIR
 
-            iter_path=$TEAS_ITER_DIR/${run_name}_${timestamp}
+            iter_path=$TEAS_ITER_DIR/$RUN_ID
 
             mkdir -p $iter_path
 
@@ -119,6 +120,12 @@ spec:
             echo "target_output_tokens" $tmp_target_output_tokens
             echo "num_samples" $tmp_num_samples
             echo "batch_size" $tmp_batch_size
+
+            # run_name=f"{inference_engine}_{model_name_clean}_{gpu}x{num_gpu}_{token_in}_{token_out}_bs{batch_size}_{dataset}"
+
+            model_name_clean=tmp_model_name
+
+            run_name="sglang_${model_name_clean}_{gpu}x{num_gpu}_${tmp_target_input_tokens}_${tmp_target_output_tokens}_bs${tmp_batch_size}_${tmp_dataset}"
 
             # Start Sglang server
             python -m moe_cap.systems.sglang --model-path $tmp_model_name --port 30000 --expert-distribution-recorder-mode stat --tp-size $tmp_tensor_parallel_size &> /dev/shm/${run_name}_${timestamp}.server_log &
