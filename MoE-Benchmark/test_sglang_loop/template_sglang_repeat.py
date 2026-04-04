@@ -19,6 +19,23 @@ spec:
         env:
           - name: SGLANG_EXPERT_DISTRIBUTION_RECORDER_DIR
             value: "/dev/shm/sglang_expert_distribution_recorder"
+          - name: HF_HOME
+            value: /mnt/input/hf_cache
+          - name: HUGGINGFACE_HUB_CACHE
+            value: /mnt/input/hf_cache/hub
+          - name: TRANSFORMERS_CACHE
+            value: /mnt/input/hf_cache/transformers
+          - name: HF_DATASETS_CACHE
+            value: /mnt/input/hf_cache/datasets
+          - name: TEAS_OUTPUT_DIR
+            value: /mnt/develop/outputs
+          - name: TEAS_ITER_DIR
+            value: /mnt/develop/iteration
+          - name: GIT_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: teas-develop-results-private-jr
+                key: git_teas_develop_results_private
         command: ["/bin/bash", "-c"]
         args:
           - |
@@ -28,7 +45,7 @@ spec:
             apt-get -y install git
 
             # Get MoE Cap
-            git clone https://github.com/markxio/MoE-CAP.git /dev/shm/MoE-CAP # why is this not the main MoE directory?
+            git clone https://github.com/Auto-CAP/MoE-CAP.git /dev/shm/MoE-CAP
             cd /dev/shm/MoE-CAP
 
             pip install -e .
@@ -36,8 +53,8 @@ spec:
 
             # Introduce logic to replace variables
 
-            run_name=james_test
-            timestamp=23032026_1
+            run_name=jr_test
+            timestamp=04042026_1
 
             ## On first pass touch a file          
             ## Place 0 in file
@@ -46,18 +63,16 @@ spec:
 
             declare -i iter
 
-            echo "check mnt location"
+            echo "check iteration director location"
 
-            ls /mnt/ceph
+            ls $TEAS_ITER_DIR
 
-            mkdir -p /mnt/ceph/jr_iter_test3
+            iter_path=$TEAS_ITER_DIR/${run_name}_${timestamp}
 
-            iter_path=/mnt/ceph/jr_iter_test3
+            mkdir -p $iter_path
 
             echo "iter path:"
             echo $iter_path
-
-            # if [[ ! -e iteration_file ]]; then touch iteration_file; iter=0; echo $iter &> iteration_file; else iter=$(cat iteration_file); fi
 
             if [[ ! -e $iter_path/iteration_file ]]; then touch $iter_path/iteration_file; iter=0; echo $iter &> $iter_path/iteration_file; else iter=$(cat $iter_path/iteration_file); fi
 
@@ -66,10 +81,8 @@ spec:
 
             rowIds=('15' '16' '17')
 
-
             echo "test iteration file created"
             cat $iter_path/iteration_file
-
 
             ## Implicit start of do-while loop
 
@@ -82,7 +95,6 @@ spec:
             echo "row number:"
             echo $row_number
             ### Load experiments.csv as table (in python)
-
 
             wget https://github.com/JPRichings/TEASBench/raw/refs/heads/main/MoE-Benchmark/direct-test-scripts/parameter.py
 
@@ -98,7 +110,6 @@ spec:
             tmp_num_samples=$(python3 parameter.py --csv_file=experiments.csv --parameter_name="num_samples" --experiment_id=$row_number)
             tmp_batch_size=$(python3 parameter.py --csv_file=experiments.csv --parameter_name="batch_size" --experiment_id=$row_number)
 
-
             echo "model name" $tmp_model_name
             echo "tensor parrallel size" $tmp_tensor_parallel_size
             echo "dataset" $tmp_dataset
@@ -108,7 +119,7 @@ spec:
             echo "batch_size" $tmp_batch_size
 
             # Start Sglang server
-            python -m moe_cap.systems.sglang --model-path $tmp_model_name --port 30000 --expert-distribution-recorder-mode stat --tp-size $tmp_tensor_parallel_size &> /dev/shm/${run_name}_${timestamp}.server_log & # REPLACE run_name and timestamp
+            python -m moe_cap.systems.sglang --model-path $tmp_model_name --port 30000 --expert-distribution-recorder-mode stat --tp-size $tmp_tensor_parallel_size &> /dev/shm/${run_name}_${timestamp}.server_log &
             SERVER_PID=$!
 
             # Wait until the /health endpoint returns HTTP 200
@@ -123,7 +134,7 @@ spec:
             echo "Starting to serve bench (sending http requests)..."
             
             mkdir -p /dev/shm/${run_name}
-            python -m moe_cap.runner.openai_api_profile --model_name ${tmp_model_name} --datasets ${tmp_dataset} --input-tokens ${tmp_target_input_tokens} --output-tokens ${tmp_target_output_tokens} --num-samples ${tmp_num_samples} --config-file configs/stub.yaml --api-url http://localhost:30000/v1/completions --backend sglang --ignore-eos --server-batch-size ${tmp_batch_size} --output_dir /dev/shm/${run_name} &> /dev/shm/${run_name}_${timestamp}.client_log # REPLACE run_name timestamp
+            python -m moe_cap.runner.openai_api_profile --model_name ${tmp_model_name} --datasets ${tmp_dataset} --input-tokens ${tmp_target_input_tokens} --output-tokens ${tmp_target_output_tokens} --num-samples ${tmp_num_samples} --config-file configs/stub.yaml --api-url http://localhost:30000/v1/completions --backend sglang --ignore-eos --server-batch-size ${tmp_batch_size} --output_dir /dev/shm/${run_name} &> /dev/shm/${run_name}_${timestamp}.client_log
 
             echo "Starting to serve bench (sending http requests)... done!"
             echo "Benchmark finished, shutting down server..."
@@ -133,11 +144,32 @@ spec:
             
             echo "Server stopped. Copying files to pvc..."
             
-            mkdir -p /mnt/ceph/tmp/MoE-CAP-outputs
-            cp -R /dev/shm/${run_name} /mnt/ceph/tmp/MoE-CAP-outputs/jr_test/
-            cp /dev/shm/${run_name}_${timestamp}* /mnt/ceph/tmp/MoE-CAP-outputs/jr_test/ # REPLACE run_name timestamp
-            
-            echo "Files copied, exiting container"
+            # Moce to root of output directory
+
+            cd $TEAS_OUTPUT_DIR
+
+            # Clone git repo to update with results
+
+            git clone https://oauth2:${GIT_TOKEN}@github.com/TEAS-project/TEAS_development_Results_Private.git
+
+            RUN_OUTPUT_DIR=$TEAS_OUPUT_DIR/TEAS_development_Results_Private/SGLANG/
+
+            # Move output data to output directory
+
+            mkdir -p $RUN_OUTPUT_DIR
+            cp -R /dev/shm/{run_name} $RUN_OUPUT_DIR/
+            cp /dev/shm/{run_name}_{timestamp}* $RUN_OUPUT_DIR/
+
+            echo "Files copied to pvc at $RUN_OUTPUT_DIR"
+
+            # Commit data to github
+
+            git add -A
+
+            git commit -m "Automated output push from k8s job"
+
+            git push https://oauth2:${GIT_TOKEN}@github.com/TEAS-project/TEAS_development_Results_Private.git
+
 
             ## Update iter file for next iteration
 
@@ -152,6 +184,9 @@ spec:
               echo "end of iterations"
             fi
 
+            # End of benchmark message
+
+            echo "Files copied, end of iteration, exiting container"
 
         ports:
           - containerPort: 30000 
@@ -164,15 +199,20 @@ spec:
             memory: '100Gi'
             nvidia.com/gpu: 1 
         volumeMounts:
-          - mountPath: /mnt/ceph
-            name: volume
+          - mountPath: /mnt/develop
+            name: develop
+          - mountPath: /mnt/input
+            name: inputs
           - mountPath: /dev/shm
             name: dshm
       restartPolicy: Never
       volumes:
-        - name: volume
+        - name: inputs
           persistentVolumeClaim:
-            claimName: client-ceph-pvc
+            claimName: inputs-pvc
+        - name: develop
+          persistentVolumeClaim:
+            claimName: develop-pvc
         - name: dshm
           emptyDir:
             medium: Memory
