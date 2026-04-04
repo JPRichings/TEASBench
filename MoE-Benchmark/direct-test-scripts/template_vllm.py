@@ -120,7 +120,7 @@ spec:
             cp -R /dev/shm/{run_name} $RUN_OUPUT_DIR/
             cp /dev/shm/{run_name}_{timestamp}* $RUN_OUPUT_DIR/
             
-            echo "Files copied to pvc at ${RUN_OUTPUT_DIR}"
+            echo "Files copied to pvc at $RUN_OUTPUT_DIR"
 
             # Commit data to github
 

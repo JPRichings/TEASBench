@@ -22,7 +22,7 @@ class Template:
         model_name_clean=model_name.split("/")[1].replace(".", "-")
         gpu=gpu_product.split("-")[1] 
 
-        run_name = get_run_name(model_name, gpu_product, num_gpu, target_input_tokens, target_output_tokens, batch_size, dataset)
+        run_name = get_run_name("sglang", model_name, gpu_product, num_gpu, target_input_tokens, target_output_tokens, batch_size, dataset)
         run_name_lower = run_name.replace("_", "-").lower()
         
         return f"""
@@ -117,7 +117,7 @@ spec:
             cp -R /dev/shm/{run_name} $RUN_OUPUT_DIR/
             cp /dev/shm/{run_name}_{timestamp}* $RUN_OUPUT_DIR/
 
-            echo "Files copied to pvc at ${RUN_OUTPUT_DIR}"
+            echo "Files copied to pvc at $RUN_OUTPUT_DIR"
 
             # Commit data to github
 
