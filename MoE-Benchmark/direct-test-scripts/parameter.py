@@ -2,7 +2,7 @@
 
 import argparse
 import pandas as pd
-
+from utils import GPU_MAP, TOKEN_LENGTH_MAP
 
 
 def main(experiments_csv, parameter_name, rowId):
@@ -11,10 +11,12 @@ def main(experiments_csv, parameter_name, rowId):
 
     x = df[parameter_name][rowId]
 
+    if "token" in parameter_name : # 4K
+        x = TOKEN_LENGTH_MAP[x]
+
     print(x)
 
     return x
-
 
 
 if __name__=="__main__":
