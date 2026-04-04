@@ -53,8 +53,10 @@ spec:
 
             # Introduce logic to replace variables
 
+            # run_name=f"{inference_engine}_{model_name_clean}_{gpu}x{num_gpu}_{token_in}_{token_out}_bs{batch_size}_{dataset}"
+
             run_name=jr_test
-            timestamp=04042026_1
+            timestamp=$( date +%Y%m%d-%H%M )
 
             ## On first pass touch a file          
             ## Place 0 in file
@@ -105,8 +107,8 @@ spec:
             tmp_model_name=$(python3 parameter.py --csv_file=experiments.csv --parameter_name="model_name" --experiment_id=$row_number)
             tmp_tensor_parallel_size=$(python3 parameter.py --csv_file=experiments.csv --parameter_name="num_gpu" --experiment_id=$row_number) 
             tmp_dataset=$(python3 parameter.py --csv_file=experiments.csv --parameter_name="dataset" --experiment_id=$row_number)
-            tmp_target_input_tokens=4000 #$(python3 parameter.py --csv_file=experiments.csv --parameter_name="target_input_tokens" --experiment_id=$row_number)
-            tmp_target_output_tokens=1000 #$(python3 parameter.py --csv_file=experiments.csv --parameter_name="target_output_tokens" --experiment_id=$row_number)
+            tmp_target_input_tokens=$(python3 parameter.py --csv_file=experiments.csv --parameter_name="target_input_tokens" --experiment_id=$row_number)
+            tmp_target_output_tokens=$(python3 parameter.py --csv_file=experiments.csv --parameter_name="target_output_tokens" --experiment_id=$row_number)
             tmp_num_samples=$(python3 parameter.py --csv_file=experiments.csv --parameter_name="num_samples" --experiment_id=$row_number)
             tmp_batch_size=$(python3 parameter.py --csv_file=experiments.csv --parameter_name="batch_size" --experiment_id=$row_number)
 
