@@ -24,7 +24,7 @@ spec:
             cpu: 2
             memory: '4Gi'
         volumeMounts:
-          - mountPath: /mnt/inputs
+          - mountPath: /mnt/input
             name: inputs
       restartPolicy: Never
       volumes:
