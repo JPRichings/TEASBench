@@ -7,4 +7,4 @@ pip install pandas
 python3 generate.py \
     --csv_file=data/experiments.csv \
     --target_dir=configs \
-    --inference_engine=vllm
+    --inference_engine=$1
