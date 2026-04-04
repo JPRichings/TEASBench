@@ -57,6 +57,11 @@ spec:
             value: /mnt/input/hf_cache/datasets
           - name: TEAS_OUTPUT_DIR
             value: /mnt/develop/outputs
+          - name: GIT_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: teas-develop-results-private-jr
+                key: git_teas_develop_results_private
         command: ["/bin/bash", "-c"]
         args:
           - |

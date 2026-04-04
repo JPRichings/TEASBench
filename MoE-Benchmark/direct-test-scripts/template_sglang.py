@@ -59,6 +59,11 @@ spec:
             value: /mnt/input/hf_cache/datasets
           - name: TEAS_OUTPUT_DIR
             value: /mnt/develop/outputs
+          - name: GIT_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: teas-develop-results-private-jr
+                key: git_teas_develop_results_private
         command: ["/bin/bash", "-c"]
         args:
           - |
@@ -111,7 +116,17 @@ spec:
             
             echo "Server stopped. Copying files to pvc..."
 
-            RUN_OUTPUT_DIR=$TEAS_OUPUT_DIR/SGLANG/
+            # Moce to root of output directory
+
+            cd $TEAS_OUTPUT_DIR
+
+            # Clone git repo to update with results
+
+            git clone https://oauth2:${GIT_TOKEN}@github.com/TEAS-project/TEAS_development_Results_Private.git
+
+            RUN_OUTPUT_DIR=$TEAS_OUPUT_DIR/TEAS_development_Results_Private/SGLANG/
+
+            # Move output data to output directory
 
             mkdir -p $RUN_OUTPUT_DIR
             cp -R /dev/shm/{run_name} $RUN_OUPUT_DIR/
@@ -121,7 +136,11 @@ spec:
 
             # Commit data to github
 
-            echo "update to github here"
+            git add -A
+
+            git commit -m "Automated output push from k8s job"
+
+            git push https://oauth2:${GIT_TOKEN}@github.com/TEAS-project/TEAS_development_Results_Private.git
 
             # End of benchmark message
 
