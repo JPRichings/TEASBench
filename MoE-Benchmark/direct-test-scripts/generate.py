@@ -19,7 +19,6 @@ def write_yaml_files(target_dir, \
 
     run_name = get_run_name(inference_engine, model_name, gpu, num_gpu, target_input_tokens, target_output_tokens, batch_size, dataset, token_abbrev=True)
 
-    print("Falg1")
     print(model_name.split("/")[1])
     file_name = f"{inference_engine}_{model_name.split("/")[1]}_{gpu}x{num_gpu}_{target_input_tokens}_{target_output_tokens}_bs{batch_size}_{dataset}.yaml"
 
