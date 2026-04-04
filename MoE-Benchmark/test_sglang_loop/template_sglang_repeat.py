@@ -122,10 +122,12 @@ spec:
             echo "batch_size" $tmp_batch_size
 
             # run_name=f"{inference_engine}_{model_name_clean}_{gpu}x{num_gpu}_{token_in}_{token_out}_bs{batch_size}_{dataset}"
+    
+            arrMN=(${tmp_model_name//// })
 
-            model_name_clean=tmp_model_name
+            model_name_clean=${arrMN[1]/./-}
 
-            run_name="sglang_${model_name_clean}_{gpu}x{num_gpu}_${tmp_target_input_tokens}_${tmp_target_output_tokens}_bs${tmp_batch_size}_${tmp_dataset}"
+            run_name="sglang_${model_name_clean}_${gpu}x${num_gpu}_${tmp_target_input_tokens}_${tmp_target_output_tokens}_bs${tmp_batch_size}_${tmp_dataset}"
 
             # Start Sglang server
             python -m moe_cap.systems.sglang --model-path $tmp_model_name --port 30000 --expert-distribution-recorder-mode stat --tp-size $tmp_tensor_parallel_size &> /dev/shm/${run_name}_${timestamp}.server_log &
