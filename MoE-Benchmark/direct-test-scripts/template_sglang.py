@@ -49,12 +49,22 @@ spec:
         env:
           - name: SGLANG_EXPERT_DISTRIBUTION_RECORDER_DIR
             value: "/dev/shm/sglang_expert_distribution_recorder"
+          - name: HF_HOME
+            value: /mnt/input/hf_cache
+          - name: HUGGINGFACE_HUB_CACHE
+            value: /mnt/input/hf_cache/hub
+          - name: TRANSFORMERS_CACHE
+            value: /mnt/input/hf_cache/transformers
+          - name: HF_DATASETS_CACHE
+            value: /mnt/input/hf_cache/datasets
+          - name: TEAS_OUTPUT_DIR
+            value: /mnt/develop/outputs
         command: ["/bin/bash", "-c"]
         args:
           - |
             apt-get update
             apt-get -y install git
-            git clone https://github.com/markxio/MoE-CAP.git /dev/shm/MoE-CAP
+            git clone  https://github.com/Auto-CAP/MoE-CAP.git /dev/shm/MoE-CAP
             cd /dev/shm/MoE-CAP
             pip install -e .
             pip install gputil
@@ -100,12 +110,23 @@ spec:
             wait $SERVER_PID
             
             echo "Server stopped. Copying files to pvc..."
-            
-            mkdir -p /mnt/ceph/tmp/MoE-CAP-outputs/{timestamp}
-            cp -R /dev/shm/{run_name} /mnt/ceph/tmp/MoE-CAP-outputs/{timestamp}/
-            cp /dev/shm/{run_name}_{timestamp}* /mnt/ceph/tmp/MoE-CAP-outputs/{timestamp}/
-            
-            echo "Files copied, exiting container"
+
+            RUN_OUTPUT_DIR=$TEAS_OUPUT_DIR/SGLANG/
+
+            mkdir -p $RUN_OUTPUT_DIR
+            cp -R /dev/shm/{run_name} $RUN_OUPUT_DIR/
+            cp /dev/shm/{run_name}_{timestamp}* $RUN_OUPUT_DIR/
+
+            echo "Files copied to pvc at ${RUN_OUTPUT_DIR}"
+
+            # Commit data to github
+
+            echo "update to github here"
+
+            # End of benchmark message
+
+            echo "Finalising container"
+
         ports:
           - containerPort: 30000 
         resources:
@@ -117,15 +138,20 @@ spec:
             memory: '100Gi'
             nvidia.com/gpu: {num_gpu}
         volumeMounts:
-          - mountPath: /mnt/ceph
-            name: volume
+          - mountPath: /mnt/develop
+            name: develop
+          - mountPath: /mnt/input
+            name: inputs
           - mountPath: /dev/shm
             name: dshm
       restartPolicy: Never
       volumes:
-        - name: volume
+        - name: inputs
           persistentVolumeClaim:
-            claimName: client-ceph-pvc
+            claimName: inputs-pvc
+        - name: develop
+          persistentVolumeClaim:
+            claimName: develop-pvc
         - name: dshm
           emptyDir:
             medium: Memory

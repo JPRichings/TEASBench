@@ -44,17 +44,25 @@ spec:
     spec:
       containers:
       - name: sglang-server
-        image: lmsysorg/sglang:latest ### ???
+        image: vllm/vllm-openai:v0.18.0-cu130
         imagePullPolicy: IfNotPresent
         env:
-          - name: SGLANG_EXPERT_DISTRIBUTION_RECORDER_DIR ### ???
-            value: "/dev/shm/sglang_expert_distribution_recorder" ### ???
+          - name: HF_HOME
+            value: /mnt/input/hf_cache
+          - name: HUGGINGFACE_HUB_CACHE
+            value: /mnt/input/hf_cache/hub
+          - name: TRANSFORMERS_CACHE
+            value: /mnt/input/hf_cache/transformers
+          - name: HF_DATASETS_CACHE
+            value: /mnt/input/hf_cache/datasets
+          - name: TEAS_OUTPUT_DIR
+            value: /mnt/develop/outputs
         command: ["/bin/bash", "-c"]
         args:
           - |
             apt-get update
             apt-get -y install git
-            git clone https://github.com/markxio/MoE-CAP.git /dev/shm/MoE-CAP ### which git repo?
+            git clone https://github.com/Auto-CAP/MoE-CAP.git /dev/shm/MoE-CAP
             cd /dev/shm/MoE-CAP
             pip install -e .
             pip install gputil
@@ -65,9 +73,9 @@ spec:
               --port 30000 \\
               --host 0.0.0.0 \\
               --tensor-parallel-size {tensor_parallel_size} \\
-              --reasoning-parser deepseek_r1 \\ ### ??? model specific
+              --reasoning-parser deepseek_r1 \\ ### ??? model specific: yes
               --enable-expert-distribution-metrics \\
-              --max-num-batched-tokens 131072 \\ ### ??? model specific
+              --max-num-batched-tokens 131072 \\ ### unstable suggestion by vllm developers leave for now
               &> /dev/shm/{run_name}_{timestamp}.server_log &
             SERVER_PID=$!
 
@@ -94,7 +102,7 @@ spec:
               --backend vllm \\
               --ignore-eos \\
               --server-batch-size {batch_size} \\
-              --output_dir /dev/shm/{run_name} \\  ### ??? run name incl. server
+              --output_dir /dev/shm/{run_name} \\
               &> /dev/shm/{run_name}_{timestamp}.client_log
 
             echo "Starting to serve bench (sending http requests)... done!"
@@ -105,11 +113,24 @@ spec:
             
             echo "Server stopped. Copying files to pvc..."
             
-            mkdir -p /mnt/ceph/tmp/MoE-CAP-outputs
-            cp -R /dev/shm/{run_name} /mnt/ceph/tmp/MoE-CAP-outputs/num_samples_256/ ### ??? should num samples be fixed here
-            cp /dev/shm/{run_name}_{timestamp}* /mnt/ceph/tmp/MoE-CAP-outputs/num_samples_256/
+            RUN_OUTPUT_DIR=$TEAS_OUPUT_DIR/vLLM/
+
+            mkdir -p $RUN_OUTPUT_DIR
+
+            cp -R /dev/shm/{run_name} $RUN_OUPUT_DIR/
+            cp /dev/shm/{run_name}_{timestamp}* $RUN_OUPUT_DIR/
             
-            echo "Files copied, exiting container"
+            echo "Files copied to pvc at ${RUN_OUTPUT_DIR}"
+
+            # Commit data to github
+
+            echo "update to github here"
+
+
+            # End of benchmark message
+
+            echo "Finalising container"
+
         ports:
           - containerPort: 30000 
         resources:
@@ -121,15 +142,20 @@ spec:
             memory: '100Gi'
             nvidia.com/gpu: {num_gpu}
         volumeMounts:
-          - mountPath: /mnt/ceph
-            name: volume
+          - mountPath: /mnt/develop
+            name: develop
+          - mountPath: /mnt/input
+            name: inputs
           - mountPath: /dev/shm
             name: dshm
       restartPolicy: Never
       volumes:
-        - name: volume
+        - name: inputs
           persistentVolumeClaim:
-            claimName: client-ceph-pvc
+            claimName: inputs-pvc
+        - name: develop
+          persistentVolumeClaim:
+            claimName: develop-pvc
         - name: dshm
           emptyDir:
             medium: Memory
