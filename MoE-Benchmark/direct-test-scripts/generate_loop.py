@@ -6,19 +6,6 @@ import pathlib
 import pandas as pd
 from utils import get_run_name, GPU_MAP, TOKEN_LENGTH_MAP
 
-# from template_sgland_repeat
-#    def get(self, \
-#        tensor_parallel_size: int, \
-#        num_gpu: int, \
-#        gpu_product: str, \
-#        completions: int, \
-#        line_array: str, \
-#        filename: str):
-#
-#        gpu=gpu_product.split("-")[1]
-
-
-
 def write_yaml_files(target_dir, \
     file_content, \
     inference_engine, \
@@ -102,18 +89,21 @@ def main(experiments_csv, yaml_target_dir, inference_engine):
     output_df["indices"] = df_gpu_num_list_indices
     output_df["input_file"] = experiments_csv_clean
 
-    ### Need change logic of this as not getting every row anymore
-    output_df["yaml"] = output_df.apply(lambda row: yaml_template().get(tensor_parallel_size=row.num_gpu, \
+
+    print("Full data frame: ", output_df)
+
+    output_df_nz = output_df[output_df["counts"] != 0]
+
+    print("Non-zero data frame: ", output_df_nz)
+
+    output_df_nz["yaml"] = output_df_nz.apply(lambda row: yaml_template().get(tensor_parallel_size=row.num_gpu, \
                                 num_gpu=row.num_gpu, \
                                 gpu_product=GPU_MAP[row.gpu], \
                                 completions=row.counts, \
                                 line_array=row.indices, \
                                 filename=row.input_file), axis=1)
 
-    print(output_df)
-
-    ### Need to change logic here as not producing a file for every row here
-    output_df.apply(lambda row: write_yaml_files(target_dir=yaml_target_dir, \
+    output_df_nz.apply(lambda row: write_yaml_files(target_dir=yaml_target_dir, \
                                             file_content=row.yaml, \
                                             inference_engine=inference_engine, \
                                             gpu=row.gpu, \
