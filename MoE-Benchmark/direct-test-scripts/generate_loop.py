@@ -1,5 +1,6 @@
 #!/bin/python3
 
+import os
 import argparse
 import pathlib
 import pandas as pd
@@ -44,7 +45,7 @@ def main(experiments_csv, yaml_target_dir, inference_engine):
 
 
     # strip suffix off of input file name
-    experiments_csv_clean = experiments_csv.split(".")[0]
+    experiments_csv_clean = os.path.basename(experiments_csv).split(".")[0]
 
     pathlib.Path(yaml_target_dir).mkdir(parents=True, exist_ok=True)
 
@@ -70,7 +71,7 @@ def main(experiments_csv, yaml_target_dir, inference_engine):
             value_gpu.append(i)
             value_num_gpu.append(j)
 
-    output_df = pd.DataFrame(key)
+    output_df = pd.DataFrame(output_key)
     output_df["gpu"] = value_gpu
     output_df["num_gpu"] = value_num_gpu
 
@@ -88,12 +89,12 @@ def main(experiments_csv, yaml_target_dir, inference_engine):
     ### Calculate combinations and index list
 
     df_gpu_num_list_counts = []
-    for i in df_gpu_num_list
-      df_gpu_num_list_counts.append(pd.Series(i[0].index).count())
+    for i in df_gpu_num_list:
+      df_gpu_num_list_counts.append(pd.Series(i.index).count())
 
     df_gpu_num_list_indices = []
-    for i in df_gpu_num_list
-      df_gpu_num_list_indices.append(' '.join(str(i) for i in df_gpu_num_list[0].index.to_list()))
+    for i in df_gpu_num_list:
+      df_gpu_num_list_indices.append(' '.join(str(j) for j in i.index.to_list()))
 
     ## Add a row to data frame for each combination of type and numebr of GPU
 
@@ -109,10 +110,10 @@ def main(experiments_csv, yaml_target_dir, inference_engine):
                                 line_array=row.indices, \
                                 filename=row.input_file), axis=1)
 
-    print(outpu_df)
+    print(output_df)
 
     ### Need to change logic here as not producing a file for every row here
-    df.apply(lambda row: write_yaml_files(target_dir=yaml_target_dir, \
+    output_df.apply(lambda row: write_yaml_files(target_dir=yaml_target_dir, \
                                             file_content=row.yaml, \
                                             inference_engine=inference_engine, \
                                             gpu=row.gpu, \

@@ -108,7 +108,7 @@ spec:
 
             ### access next element of the array of row ids
             
-            row_number="${rowIds[iter]}"
+            row_number="$(rowIds[iter])" ### needs deconflicting with python f"" replacement
 
             echo "iter:"
             echo $iter
@@ -138,16 +138,16 @@ spec:
             echo "num_samples" $tmp_num_samples
             echo "batch_size" $tmp_batch_size
 
-            # run_name=f"{inference_engine}_{model_name_clean}_{gpu}x{num_gpu}_{token_in}_{token_out}_bs{batch_size}_{dataset}"
+            # run_name="inference_engine_model_name_clean_gpuxnum_gpu_token_in_token_out_bsbatch_size_dataset"
     
-            arrMN=(${tmp_model_name//// })
+            arrMN=($(tmp_model_name//// )) ### needs deconflicting with python f"" replacement
 
-            model_name_clean=${arrMN[1]/./-}
+            model_name_clean=$(arrMN[1]/./) ### needs deconflicting with python f"" replacement
 
-            run_name="sglang_${model_name_clean}_${gpu}x${num_gpu}_${tmp_target_input_tokens}_${tmp_target_output_tokens}_bs${tmp_batch_size}_${tmp_dataset}"
+            run_name="sglang_$model_name_clean_$gpux$num_gpu_$tmp_target_input_tokens_$tmp_target_output_tokens_bs$tmp_batch_size_$tmp_dataset"
 
             # Start Sglang server
-            python -m moe_cap.systems.sglang --model-path $tmp_model_name --port 30000 --expert-distribution-recorder-mode stat --tp-size $tmp_tensor_parallel_size &> /dev/shm/${run_name}_${timestamp}.server_log &
+            python -m moe_cap.systems.sglang --model-path $tmp_model_name --port 30000 --expert-distribution-recorder-mode stat --tp-size $tmp_tensor_parallel_size &> /dev/shm/$run_name_$timestamp.server_log &
             SERVER_PID=$!
 
             # Wait until the /health endpoint returns HTTP 200
@@ -161,8 +161,8 @@ spec:
             echo "SGLang server is ready!"
             echo "Starting to serve bench (sending http requests)..."
             
-            mkdir -p /dev/shm/${run_name}
-            python -m moe_cap.runner.openai_api_profile --model_name ${tmp_model_name} --datasets ${tmp_dataset} --input-tokens ${tmp_target_input_tokens} --output-tokens ${tmp_target_output_tokens} --num-samples ${tmp_num_samples} --config-file configs/stub.yaml --api-url http://localhost:30000/v1/completions --backend sglang --ignore-eos --server-batch-size ${tmp_batch_size} --output_dir /dev/shm/${run_name} &> /dev/shm/${run_name}_${timestamp}.client_log
+            mkdir -p /dev/shm/$run_name
+            python -m moe_cap.runner.openai_api_profile --model_name $tmp_model_name --datasets $tmp_dataset --input-tokens $tmp_target_input_tokens --output-tokens $tmp_target_output_tokens --num-samples $tmp_num_samples --config-file configs/stub.yaml --api-url http://localhost:30000/v1/completions --backend sglang --ignore-eos --server-batch-size $tmp_batch_size --output_dir /dev/shm/$run_name &> /dev/shm/$run_name_$timestamp.client_log
 
             echo "Starting to serve bench (sending http requests)... done!"
             echo "Benchmark finished, shutting down server..."
@@ -178,15 +178,15 @@ spec:
 
             # Clone git repo to update with results
 
-            git clone https://oauth2:${GIT_TOKEN}@github.com/TEAS-project/TEAS_development_Results_Private.git
+            git clone https://oauth2:$(GIT_TOKEN)@github.com/TEAS-project/TEAS_development_Results_Private.git ### needs deconflicting with python f"" replacement
 
             RUN_OUTPUT_DIR=$TEAS_OUPUT_DIR/TEAS_development_Results_Private/SGLANG/
 
             # Move output data to output directory
 
             mkdir -p $RUN_OUTPUT_DIR
-            cp -R /dev/shm/{run_name} $RUN_OUPUT_DIR/
-            cp /dev/shm/{run_name}_{timestamp}* $RUN_OUPUT_DIR/
+            cp -R /dev/shm/$run_name $RUN_OUPUT_DIR/
+            cp /dev/shm/$run_name_$timestamp* $RUN_OUPUT_DIR/
 
             echo "Files copied to pvc at $RUN_OUTPUT_DIR"
 
@@ -196,12 +196,12 @@ spec:
 
             git commit -m "Automated output push from k8s job"
 
-            git push https://oauth2:${GIT_TOKEN}@github.com/TEAS-project/TEAS_development_Results_Private.git
+            git push https://oauth2:$(GIT_TOKEN)@github.com/TEAS-project/TEAS_development_Results_Private.git ### needs deconflicting with python f"" replacement
 
 
             ## Update iter file for next iteration
 
-            if [[ iter -le ${#rowIds[@]} ]]; then
+            if [[ iter -le $(#rowIds[@]) ]]; then ### needs deconflicting with python f"" replacement
               iter+=1
               echo "updated iter:"               
               echo $iter
