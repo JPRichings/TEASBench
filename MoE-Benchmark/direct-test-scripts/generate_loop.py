@@ -3,8 +3,19 @@
 import argparse
 import pathlib
 import pandas as pd
-# from template import Template as yaml_template
 from utils import get_run_name, GPU_MAP, TOKEN_LENGTH_MAP
+
+# from template_sgland_repeat
+#    def get(self, \
+#        tensor_parallel_size: int, \
+#        num_gpu: int, \
+#        gpu_product: str, \
+#        completions: int, \
+#        line_array):
+#
+#        gpu=gpu_product.split("-")[1]
+
+
 
 def write_yaml_files(target_dir, \
     file_content, \
@@ -31,11 +42,64 @@ def main(experiments_csv, yaml_target_dir, inference_engine):
         raise SystemExit(1)
 
 
+    # strip suffix off of input file name
     experiments_csv_clean = experiments_csv
 
     pathlib.Path(yaml_target_dir).mkdir(parents=True, exist_ok=True)
 
     df = pd.read_csv(experiments_csv)
+
+    # Analyse the input file
+
+    ## Get number of entries for each combination of type and numebr of GPU
+
+    gpu_series = pd.Series(df["gpu"]).unique()
+
+    num_gpu_series = pd.Series(df["num_gpu"]).unique()
+
+    ## Create new data frame
+
+    output_key = []
+    value_gpu = []
+    value_num_gpu = []
+
+    for i in gpu_series:
+        for j in num_gpu_series:
+            output_key.append(f"{i}x{j}")
+            value_gpu.append(i)
+            value_num_gpu.append(j)
+
+    output_df = pd.DataFrame(key)
+    output_df["gpu"] = value_gpu
+    output_df["num_gpu"] = value_num_gpu
+
+    ## Identify which lines each GPU combiantion is used and add to a list
+
+    df_gpu_list = []
+    for g in gpu_series:
+        df_gpu_list.append(df[df['gpu'] == g])
+
+    df_gpu_num_list = []
+    for d in df_gpu_list:
+      for n in num_gpu_series:
+        df_gpu_num_list.append(d[d['num_gpu'] == n])
+
+    ### Calculate combinations and index list
+
+    df_gpu_num_list_counts = []
+    for i in df_gpu_num_list
+      df_gpu_num_list_counts.append(pd.Series(i[0].index).count())
+
+    df_gpu_num_list_indices = []
+    for i in df_gpu_num_list
+      df_gpu_num_list_indices.append(','.join(str(i) for i in df_gpu_num_list[0].index.to_list()))
+
+    ## Add a row to data frame for each combination of type and numebr of GPU
+
+    output_df["counts"] = df_gpu_num_list_counts
+    output_df["indices"] = df_gpu_num_list_indices
+    output_df["input_file"] = experiments_csv_clean
+
     ### Need change logic of this as not getting every row anymore
     df["yaml"] = df.apply(lambda row: yaml_template().get(model_name=row.model_name, \
                                 tensor_parallel_size=row.num_gpu, \
