@@ -1,1 +1,2 @@
-MoE-Benchmark/direct-test-scripts/configs/
+MoE-Benchmark/direct-test-scripts/configs/sglang*
+MoE-Benchmark/direct-test-scripts/configs/vllm*
