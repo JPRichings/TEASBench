@@ -11,7 +11,8 @@ from utils import get_run_name, GPU_MAP, TOKEN_LENGTH_MAP
 #        num_gpu: int, \
 #        gpu_product: str, \
 #        completions: int, \
-#        line_array):
+#        line_array: str, \
+#        filename: str):
 #
 #        gpu=gpu_product.split("-")[1]
 
@@ -43,7 +44,7 @@ def main(experiments_csv, yaml_target_dir, inference_engine):
 
 
     # strip suffix off of input file name
-    experiments_csv_clean = experiments_csv
+    experiments_csv_clean = experiments_csv.split(".")[0]
 
     pathlib.Path(yaml_target_dir).mkdir(parents=True, exist_ok=True)
 
@@ -101,16 +102,12 @@ def main(experiments_csv, yaml_target_dir, inference_engine):
     output_df["input_file"] = experiments_csv_clean
 
     ### Need change logic of this as not getting every row anymore
-    df["yaml"] = df.apply(lambda row: yaml_template().get(model_name=row.model_name, \
-                                tensor_parallel_size=row.num_gpu, \
-                                dataset=row.dataset, \
-                                target_input_tokens=TOKEN_LENGTH_MAP[row.target_input_tokens], \
-                                target_output_tokens=TOKEN_LENGTH_MAP[row.target_output_tokens], \
-                                num_samples=row.num_samples, \
-                                batch_size=row.batch_size, \
+    output_df["yaml"] = output_df.apply(lambda row: yaml_template().get(tensor_parallel_size=row.num_gpu, \
                                 num_gpu=row.num_gpu, \
-                                gpu_product=GPU_MAP[row.gpu]), axis=1)
-   
+                                gpu_product=GPU_MAP[row.gpu], \
+                                completions=row.counts, \
+                                line_array=row.indices, \
+                                filename=row.input_file), axis=1)
 
     ### Need to change logic here as not producing a file for every row here
     df.apply(lambda row: write_yaml_files(target_dir=yaml_target_dir, \
