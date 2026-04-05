@@ -16,7 +16,7 @@ class Template:
 
         gpu=gpu_product.split("-")[1] 
 
-        with open(os.path.expanduser("template_sglang_loop.yaml"), "r") as f:
+        with open(os.path.expanduser("yaml_templates/template_sglang_loop.yaml"), "r") as f:
             template = f.read()
 
         template = template.replace("@tensor_parallel_size@", str(tensor_parallel_size))

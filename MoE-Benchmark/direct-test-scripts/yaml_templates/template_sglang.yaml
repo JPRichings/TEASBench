@@ -1,52 +1,7 @@
-#!/bin/python3
-
-from datetime import datetime
-from utils import get_run_name
-
-class Template:
-    def __init__(self):
-        return
-
-    def get(self, \
-        model_name: str, \
-        tensor_parallel_size: int, \
-        dataset: str, \
-        target_input_tokens: int, \
-        target_output_tokens: int, \
-        num_samples: int, \
-        batch_size: int, \
-        num_gpu: int, \
-        gpu_product: str):
-
-        model_name_clean=model_name.split("/")[1].replace(".", "-")
-        gpu=gpu_product.split("-")[1] 
-
-        run_name = get_run_name("sglang", model_name, gpu_product, num_gpu, target_input_tokens, target_output_tokens, batch_size, dataset)
-        run_name_lower = run_name.replace("_", "-").lower()
-
-        with open(os.path.expanduser("yaml_templates/template_sglang.yaml"), "r") as f:
-          template = f.read()
-
-        template = template.replace("@model_name@", str(model_name_clean))
-        template = template.replace("@tensor_parallel_size@", str(tensor_parallel_size))
-        template = template.replace("@dataset@", str(dataset))
-        template = template.replace("@num_gpu@", str(num_gpu))
-        template = template.replace("@target_input_tokens@", str(target_input_tokens))
-        template = template.replace("@target_output_tokens@", str(target_output_tokens))
-        template = template.replace("@num_samples@", str(num_samples))
-        template = template.replace("@gpu_product@", str(gpu))
-        template = template.replace("@batch_size@", str(batch_size))
-        template = template.replace("@run_name@", str(run_name))
-        
-        return template
-
-
-"""
 apiVersion: batch/v1
 kind: Job
 metadata:
   generateName: sglang-moe-cap-
-  #generateName: sglang-moe-cap-{run_name.replace("_", "-").lower()}-
   labels:
     kueue.x-k8s.io/queue-name:  eidf230ns-user-queue
 spec:
@@ -56,7 +11,6 @@ spec:
   template:
     metadata:
       name: job-sglang-moe-cap
-      #name: job-sglang-moe-cap-{run_name.replace("_", "-").lower()}
     spec:
       containers:
       - name: sglang-server
@@ -94,11 +48,11 @@ spec:
 
             # Start server
             python -m moe_cap.systems.sglang \\
-              --model-path {model_name} \\
+              --model-path @model_name@ \\
               --port 30000 \\
               --expert-distribution-recorder-mode stat \\
-              --tp-size {tensor_parallel_size} \\
-              &> /dev/shm/{run_name}_$timestamp.server_log &
+              --tp-size @tensor_parallel_size@ \\
+              &> /dev/shm/@run_name@_$timestamp.server_log &
             SERVER_PID=$!
 
             # Wait until the /health endpoint returns HTTP 200
@@ -112,19 +66,19 @@ spec:
             echo "SGLang server is ready!"
             echo "Starting to serve bench (sending http requests)..."
             
-            mkdir -p /dev/shm/{run_name}
+            mkdir -p /dev/shm/@run_name@
             python -m moe_cap.runner.openai_api_profile \\
-              --model_name {model_name} \\
-              --datasets {dataset} \\
-              --target-input-tokens {target_input_tokens} \\
-              --target-output-tokens {target_output_tokens} \\
-              --num-samples {num_samples} \\
+              --model_name @model_name@ \\
+              --datasets @dataset@ \\
+              --target-input-tokens @target_input_tokens@ \\
+              --target-output-tokens @target_output_tokens@ \\
+              --num-samples @num_samples@ \\
               --api-url http://localhost:30000/v1/completions \\
               --backend sglang \\
               --ignore-eos \\
-              --server-batch-size {batch_size} \\
-              --output_dir /dev/shm/{run_name} \\
-              &> /dev/shm/{run_name}_$timestamp.client_log
+              --server-batch-size @batch_size@ \\
+              --output_dir /dev/shm/@run_name@ \\
+              &> /dev/shm/@run_name@_$timestamp.client_log
 
             echo "Starting to serve bench (sending http requests)... done!"
             echo "Benchmark finished, shutting down server..."
@@ -147,8 +101,8 @@ spec:
             # Move output data to output directory
 
             mkdir -p $RUN_OUTPUT_DIR
-            cp -R /dev/shm/{run_name} $RUN_OUPUT_DIR/
-            cp /dev/shm/{run_name}_$timestamp* $RUN_OUPUT_DIR/
+            cp -R /dev/shm/@run_name@ $RUN_OUPUT_DIR/
+            cp /dev/shm/@run_name@_$timestamp* $RUN_OUPUT_DIR/
 
             echo "Files copied to pvc at $RUN_OUTPUT_DIR"
 
@@ -158,7 +112,7 @@ spec:
 
             git commit -m "Automated output push from k8s job"
 
-            git push https://oauth2:$(GIT_TOKEN)@github.com/TEAS-project/TEAS_development_Results_Private.git
+            git push https://oauth2:${GIT_TOKEN}@github.com/TEAS-project/TEAS_development_Results_Private.git
 
             # End of benchmark message
 
@@ -173,7 +127,7 @@ spec:
           limits:
             cpu: 10
             memory: '100Gi'
-            nvidia.com/gpu: {num_gpu}
+            nvidia.com/gpu: @num_gpu@
         volumeMounts:
           - mountPath: /mnt/develop
             name: develop
@@ -194,5 +148,4 @@ spec:
             medium: Memory
             sizeLimit: 16Gi
       nodeSelector:
-        nvidia.com/gpu.product: {gpu_product}
-               """
+        nvidia.com/gpu.product: @gpu_product@ 
