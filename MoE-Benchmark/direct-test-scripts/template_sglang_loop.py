@@ -1,5 +1,7 @@
 #!/bin/python3
 
+import os
+
 class Template:
     def __init__(self):
         return
