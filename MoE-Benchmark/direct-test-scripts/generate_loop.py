@@ -93,7 +93,7 @@ def main(experiments_csv, yaml_target_dir, inference_engine):
 
     df_gpu_num_list_indices = []
     for i in df_gpu_num_list
-      df_gpu_num_list_indices.append(','.join(str(i) for i in df_gpu_num_list[0].index.to_list()))
+      df_gpu_num_list_indices.append(' '.join(str(i) for i in df_gpu_num_list[0].index.to_list()))
 
     ## Add a row to data frame for each combination of type and numebr of GPU
 
@@ -108,6 +108,8 @@ def main(experiments_csv, yaml_target_dir, inference_engine):
                                 completions=row.counts, \
                                 line_array=row.indices, \
                                 filename=row.input_file), axis=1)
+
+    print(outpu_df)
 
     ### Need to change logic here as not producing a file for every row here
     df.apply(lambda row: write_yaml_files(target_dir=yaml_target_dir, \
