@@ -1,29 +1,15 @@
 #!/bin/python3
 
-from datetime import datetime
-from utils import get_run_name
-
 class Template:
     def __init__(self):
         return
 
     def get(self, \
-        model_name: str, \
         tensor_parallel_size: int, \
-        dataset: str, \
-        target_input_tokens: int, \
-        target_output_tokens: int, \
-        num_samples: int, \
-        batch_size: int, \
         num_gpu: int, \
         gpu_product: str):
 
-        timestamp = datetime.now().strftime("%Y%m%d-%H%M")
-        model_name_clean=model_name.split("/")[1].replace(".", "-")
         gpu=gpu_product.split("-")[1] 
-
-        run_name = get_run_name(model_name, gpu_product, num_gpu, target_input_tokens, target_output_tokens, batch_size, dataset)
-        run_name_lower = run_name.replace("_", "-").lower()
         
         return f"""
 apiVersion: batch/v1
