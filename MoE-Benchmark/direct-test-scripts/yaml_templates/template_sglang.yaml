@@ -94,7 +94,7 @@ spec:
 
             # Clone git repo to update with results
 
-            git clone https://oauth2:$(GIT_TOKEN)@github.com/TEAS-project/TEAS_development_Results_Private.git
+            git clone https://oauth2:${GIT_TOKEN}@github.com/TEAS-project/TEAS_development_Results_Private.git
 
             RUN_OUTPUT_DIR=$TEAS_OUPUT_DIR/TEAS_development_Results_Private/SGLANG/
 
