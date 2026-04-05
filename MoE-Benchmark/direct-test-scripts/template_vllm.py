@@ -72,6 +72,8 @@ spec:
             pip install -e .
             pip install gputil
 
+            timestamp=$( date +%Y%m%d-%H%M )
+
             # Start server
             python -m moe_cap.systems.vllm \\
               --model-path {model_name} \\
@@ -81,7 +83,7 @@ spec:
               --reasoning-parser deepseek_r1 \\ ### ??? model specific: yes
               --enable-expert-distribution-metrics \\
               --max-num-batched-tokens 131072 \\ ### unstable suggestion by vllm developers leave for now
-              &> /dev/shm/{run_name}_{timestamp}.server_log &
+              &> /dev/shm/{run_name}_$timestamp.server_log &
             SERVER_PID=$!
 
             # Wait until the /health endpoint returns HTTP 200
@@ -108,7 +110,7 @@ spec:
               --ignore-eos \\
               --server-batch-size {batch_size} \\
               --output_dir /dev/shm/{run_name} \\
-              &> /dev/shm/{run_name}_{timestamp}.client_log
+              &> /dev/shm/{run_name}_$timestamp.client_log
 
             echo "Starting to serve bench (sending http requests)... done!"
             echo "Benchmark finished, shutting down server..."
@@ -123,7 +125,7 @@ spec:
             mkdir -p $RUN_OUTPUT_DIR
 
             cp -R /dev/shm/{run_name} $RUN_OUPUT_DIR/
-            cp /dev/shm/{run_name}_{timestamp}* $RUN_OUPUT_DIR/
+            cp /dev/shm/{run_name}_$timestamp* $RUN_OUPUT_DIR/
             
             echo "Files copied to pvc at $RUN_OUTPUT_DIR"
 

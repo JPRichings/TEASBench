@@ -18,7 +18,7 @@ class Template:
         num_gpu: int, \
         gpu_product: str):
 
-        timestamp = datetime.now().strftime("%Y%m%d-%H%M")
+        #timestamp = datetime.now().strftime("%Y%m%d-%H%M")
         model_name_clean=model_name.split("/")[1].replace(".", "-")
         gpu=gpu_product.split("-")[1] 
 
@@ -74,13 +74,15 @@ spec:
             pip install -e .
             pip install gputil
 
+            timestamp=$( date +%Y%m%d-%H%M )
+
             # Start server
             python -m moe_cap.systems.sglang \\
               --model-path {model_name} \\
               --port 30000 \\
               --expert-distribution-recorder-mode stat \\
               --tp-size {tensor_parallel_size} \\
-              &> /dev/shm/{run_name}_{timestamp}.server_log &
+              &> /dev/shm/{run_name}_$timestamp.server_log &
             SERVER_PID=$!
 
             # Wait until the /health endpoint returns HTTP 200
@@ -106,7 +108,7 @@ spec:
               --ignore-eos \\
               --server-batch-size {batch_size} \\
               --output_dir /dev/shm/{run_name} \\
-              &> /dev/shm/{run_name}_{timestamp}.client_log
+              &> /dev/shm/{run_name}_$timestamp.client_log
 
             echo "Starting to serve bench (sending http requests)... done!"
             echo "Benchmark finished, shutting down server..."
@@ -122,7 +124,7 @@ spec:
 
             # Clone git repo to update with results
 
-            git clone https://oauth2:${GIT_TOKEN}@github.com/TEAS-project/TEAS_development_Results_Private.git
+            git clone https://oauth2:$(GIT_TOKEN)@github.com/TEAS-project/TEAS_development_Results_Private.git
 
             RUN_OUTPUT_DIR=$TEAS_OUPUT_DIR/TEAS_development_Results_Private/SGLANG/
 
@@ -130,7 +132,7 @@ spec:
 
             mkdir -p $RUN_OUTPUT_DIR
             cp -R /dev/shm/{run_name} $RUN_OUPUT_DIR/
-            cp /dev/shm/{run_name}_{timestamp}* $RUN_OUPUT_DIR/
+            cp /dev/shm/{run_name}_$timestamp* $RUN_OUPUT_DIR/
 
             echo "Files copied to pvc at $RUN_OUTPUT_DIR"
 
@@ -140,7 +142,7 @@ spec:
 
             git commit -m "Automated output push from k8s job"
 
-            git push https://oauth2:${GIT_TOKEN}@github.com/TEAS-project/TEAS_development_Results_Private.git
+            git push https://oauth2:$(GIT_TOKEN)@github.com/TEAS-project/TEAS_development_Results_Private.git
 
             # End of benchmark message
 
